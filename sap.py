@@ -1,153 +1,97 @@
-import re
 import win32com.client as __win32
 import win32clipboard as __clip
 
 ## Requirements: pip install pywin32
-
 ## Documentation: https://help.sap.com/viewer/b47d018c3b9b45e897faf66a6c0885a8/760.00/en-US
 
-def create(profile="P12 ONE"):
+def create(profile: str, inplace: bool = False) -> list:
     try:
         ## Instantiate SAP GUI application (creating the object)
         app = __win32.Dispatch("Sapgui.ScriptingCtrl.1") # GuiApplication Object
     except Exception as err:
-        print(err.args[1])
+        print(f"[!] Unable to create SAP GUI instance for scripting: {err.args[1]}")
         return []
 
-    # Public Function OpenConnection( _
-    #     ByVal Description As String, _
-    #     Optional ByVal Sync As Variant, _
-    #     Optional ByVal Raise As Variant _
-    # ) As GuiConnection
-    con = app.OpenConnection(profile, True, False) # GuiConnection Object
-    
-    if con is None:
-        app = None
-        print("Open Connection fail")
-        return []
+    return __create_connection(profile, [app], inplace)
 
-    print(con.Description, con.name, con.id, con.DisabledByServer)
 
-    # This property is another name for the Children property
-    session = con.Sessions(0) # GuiSession Object
-
-    __multiple_logon(session)
-
-    print(session.Info.User, session.Info.SystemName, session.Info.Client, session.Name)
-
-    return [app, con, session] # SAP Connection Data
-
-def attach(profile="P12 ONE"): ## SAP Logon 750 must be open
-
+def attach(profile: str, inplace: bool = False) -> list:
     try:
         ## Attach to a running instance of SAP GUI (getting the object)
         sap = __win32.GetObject("SAPGUI")
-        ## Getting the scripting application
-        app = sap.GetScriptingEngine # GuiApplication Object
     except Exception as err:
-        print(err.args[1])
+        print(f"[!] SAP Logon instance was not found: {err.args[1]}")
         return []
+
+    ## Getting the scripting application
+    app = sap.GetScriptingEngine # GuiApplication Object
+    if not isinstance(app, __win32.CDispatch):
+        sap = None
+        return []
+
+    return __create_connection(profile, [app], inplace)
+    
+
+def __create_connection(profile: str, lapp: list, inplace: bool) -> list:
+    ## To create a new SAP GUI instance placed within your application
+    profile += "/INPLACE" if inplace else "" 
 
     # Public Function OpenConnection( _
     #     ByVal Description As String, _
     #     Optional ByVal Sync As Variant, _
     #     Optional ByVal Raise As Variant _
     # ) As GuiConnection
-    con = app.OpenConnection(profile, True, False) # GuiConnection Object
+    con = lapp[0].OpenConnection(profile, True, False) # GuiConnection Object
 
     # In this case we're opening a new connection
     # however once we are getting a instance of SAP 
     # it's possible to get the a connecion that already exists
     # like this con.Children(0)
     if con is None:
-        sap, app = None, None
+        sap, lapp[0] = None, None
         print("Open Connection fail")
         return []
 
-    print(con.Description, con.name, con.id, con.DisabledByServer)
+    print(f"{con.Description} {con.name}")
 
     # This property is another name for the Children property
     session = con.Sessions(0) # GuiSession Object
 
     __multiple_logon(session)
 
-    print(session.Info.User, session.Info.SystemName, session.Info.Client, session.name)
+    print(f"{session.Info.User} {session.Info.SystemName} {session.Info.Client} {session.name}")
 
-    return [app, con, session] # SAP Connection Data
+    return [lapp[0], con, session] # SAP Connection Data
 
-def __multiple_logon(session):
+
+def __multiple_logon(session: object) -> None:
     while session.children.count > 1:
         try:
-            session.findById("wnd[1]/usr/radMULTI_LOGON_OPT2").select()
-            session.findById("wnd[1]/tbar[0]/btn[0]").press()
+            session.FindById("wnd[1]/usr/radMULTI_LOGON_OPT2").select()
+            session.FindById("wnd[1]/tbar[0]/btn[0]").press()
         except:
-            session.ActiveWindow.sendVKey(0)
+            session.ActiveWindow.sendVKey(vKeys["Enter"])
 
-def close(sap_connection_data):
-    sap_connection_data[1].CloseSession(sap_connection_data[2].id)
-    sap_connection_data[1].CloseConnection()
-    sap_connection_data[0] = None
-    sap_connection_data[1] = None
-    sap_connection_data[2] = None
 
-def findByMapId(obj, elements, pos=0):
-    if pos == len(elements):
-        return obj
+def close(sap_connection_data: list) -> bool:
     try:
-        for el in list(obj.children):
-            if elements[pos] in el.id:
-                el_id = findByMapId(el, elements, pos+1)
-                if not el_id:
-                    continue
-                else:
-                    return el_id
-    except:
-        return None
+        sap_connection_data[1].CloseSession(sap_connection_data[2].id)
+        sap_connection_data[1].CloseConnection()
+        sap_connection_data[0] = None
+        sap_connection_data[1] = None
+        sap_connection_data[2] = None
+        return True
+    except Exception as err:
+        print(f"[!] SAP Connection was not closed: {err.args[1]}")
+        return False
 
-def debug(obj, depth = 0):
-    try:
-        for el in list(obj.children):
-            print("\t"*depth, el.Id)
-            print("\t"*depth, el.Name)
-            print("\t"*depth, el.Text)
-            print("\t"*depth, el.Type)
-            debug(el, depth+1)
-    except:
-        return None
-
-# When you extract the data from SAP in a local file 
-# the default format is unique of SAP
-# This method below try to convert this default format (unconvented)
-# to a csv file, that can be read by any other tool
-# need some improvements
-def unconverted_to_csv(input_file_name, skiprows=0, sep="|", output_encoding="utf-8"):
-    with open(input_file_name) as ifile, open(input_file_name + ".csv", "w", encoding=output_encoding) as ofile:
-        data = ifile.readlines()
-        rdata = ""
-        for i,l in enumerate(data):
-            if i < skiprows: continue
-            if not l.strip(): continue
-            if l[0] == "-": continue
-            
-            base_line = l.strip("\n")
-            base_line = base_line[1:-1] + "\n"
-            base_line = re.sub(" +", " ", base_line)
-           
-            rdata += base_line
-
-        rdata = rdata.rstrip("\n")
-        
-        if sep != "|":
-            rdata = rdata.replace("|", sep)
-
-        ofile.write(rdata)
-
-def list_to_clipboard(list_data):
-    text = "\r\n".join(str(e) for e in list_data)
+def list_to_clipboard(data: list) -> None:
+    text = "\r\n".join(str(e) for e in data)
     __clip.OpenClipboard()
     __clip.EmptyClipboard()
     __clip.SetClipboardText(text)
     __clip.CloseClipboard()
+
 
 vKeys = {
     "Enter": 0,
