@@ -1,4 +1,4 @@
-# SAP Gui scripting API
+# SAP Gui Scripting API
 
 Simple module to use sap gui scripting api in a easy way
 
@@ -12,8 +12,7 @@ Simple module to use sap gui scripting api in a easy way
 ```Python 3
     import sap
 
-    sap_connection_data = sap.create()
-  # sap_connection_data = sap.attach()
+    sap_connection_data = sap.attach("System_Name")
 
     if sap_connection_data:
 
@@ -22,4 +21,13 @@ Simple module to use sap gui scripting api in a easy way
         # script here
 
         sap.close(sap_connection_data)
+```
+
+```VBA
+    Dim sap As New SapGuiScripting
+    If sap.Attach("System_Name") Then
+        
+        ' script here
+        
+    End If
 ```
