@@ -1,15 +1,15 @@
 # SAP Automation Modules
 
-Simple module to use sap gui scripting api and sap analysis for office in a easy way 😀
+Simple modules to use sap gui scripting api and sap analysis for office in a easy way 😀
 
-### Documentation
- - https://help.sap.com/viewer/b47d018c3b9b45e897faf66a6c0885a8/760.00/en-US
+### Documentations
 
-### Requirements: 
-- ``` pip install pywin32 ```
+ - [SAP GUI Scripting API](https://help.sap.com/viewer/b47d018c3b9b45e897faf66a6c0885a8/760.00/en-US)
+ - [SAP Analysis for Microsoft Office](https://help.sap.com/docs/SAP_BUSINESSOBJECTS_ANALYSIS_OFFICE/ca9c58444d64420d99d6c136a3207632/ebf198667aa54740b9049d9da804a901.html?version=2.8.8.0)
 
 ### Gui Scripting Module
 ```Python 3
+    # pip install pywin32
     import sap
 
     sap_connection_data = sap.attach("System_Name")
