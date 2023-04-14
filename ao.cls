@@ -13,8 +13,8 @@ Private xl As excel.Application
 Private m_client As String
 Private m_user As String
 
-Private Sub class_initilize()
-    Set xl = Application
+Private Sub class_initialize()
+    Set xl = ThisWorkbook.Application
     m_client = "000"
     m_user = Environ$("username")
 End Sub
