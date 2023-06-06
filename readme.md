@@ -9,42 +9,52 @@ Simple modules to use sap gui scripting api and sap analysis for office in a eas
 
 ### Gui Scripting Module
 ```Python 3
-    # pip install pywin32
-    import sap
+# pip install pywin32
+import sap
 
-    sap_connection_data = sap.attach("System_Name")
+sap_connection_data = sap.attach("System_Name")
 
-    if sap_connection_data:
+if sap_connection_data:
 
-        application, connection, session = sap_connection_data
+    application, connection, session = sap_connection_data
 
-        # script here
+    # script here
 
-        sap.close(sap_connection_data)
+    sap.close(sap_connection_data)
 ```
 
 ```VBA
-    Dim sap As New SapGuiScripting
-    If sap.Attach("System_Name") Then
-        
-        ' script here
-        
-    End If
+Dim sap As New SapGuiScripting
+If sap.Attach("System_Name") Then
+
+    ' script here
+
+End If
 ```
 
 ### Analysis for Office Module
+```Python 3
+from ao import SapAnalysisOffice
 
-```VBA
-    Dim prompts As New Dictionary
-    With prompts
-        .Add "<variable technical name 0>", "<variable value 0>"
-        .Add "<variable technical name 1>", "<variable value 1>"
-        .Add "<variable technical name 2>", "<variable value 2>"
-    End With
+with SapAnalysisOffice('Ao_Workbook_File_Path') as ao:
 
-    Dim ao As New SapAnalysisOffice
-    If Not ao.Refresh("DS_1", prompts) Then
-        Debug.Print "Refresh AO fail!"
-    End If
+   if not 'DS_NAME' in ao.datasources:
+       print(f'Data Source "DS_NAME" does not exist in Workbook "{ao.wb.Name}"')
+
+   if not ao.is_connected(data_src):
+       ao.refresh(data_src)
 ```
 
+```VBA
+Dim prompts As New Dictionary
+With prompts
+    .Add "<variable technical name 0>", "<variable value 0>"
+    .Add "<variable technical name 1>", "<variable value 1>"
+    .Add "<variable technical name 2>", "<variable value 2>"
+End With
+
+Dim ao As New SapAnalysisOffice
+If Not ao.Refresh("DS_1", prompts) Then
+    Debug.Print "Refresh AO fail!"
+End If
+```
